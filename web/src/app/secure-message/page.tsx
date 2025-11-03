@@ -19,6 +19,11 @@ import Header from "@/components/Header";
 import { copyToClipboard } from "@/lib/utils";
 import KeyGenerator from "@/components/KeyGenerator";
 import { RSAKeys } from "@/types/key";
+import {
+  useDecryptMessageMutation,
+  useEncryptMessageMutation,
+} from "@/redux/apis/secure-message-api";
+import { ErrorResponse } from "@/redux/apis/api";
 
 const SecureMessage = () => {
   const [keys, setKeys] = useState<RSAKeys | null>(null);
@@ -32,6 +37,9 @@ const SecureMessage = () => {
   const [decryptD, setDecryptD] = useState("");
   const [decryptN, setDecryptN] = useState("");
   const [ciphertext, setCiphertext] = useState("");
+
+  const [encryptMessageMutation] = useEncryptMessageMutation();
+  const [decryptMessageMutation] = useDecryptMessageMutation();
 
   const encryptMessage = useCallback(async () => {
     if (!message) {
@@ -48,27 +56,19 @@ const SecureMessage = () => {
     }
 
     try {
-      const encrypted = await fetch(
-        "http://localhost:8000/api/encrypt-message",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ message, public_key: { e, n } }),
-        }
-      )
-        .then((res) => res.json())
-        .then((data) => data.ciphertext);
+      const encrypted = await encryptMessageMutation({
+        message,
+        public_key: { e, n },
+      }).unwrap();
 
-      setEncryptedMessage(encrypted);
+      setEncryptedMessage(encrypted.cipherText);
       toast.success("Mã hóa thành công!");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi mã hóa!", {
-        description: error instanceof Error ? error.message : String(error),
+        description: (error.data as ErrorResponse).detail || "Unknown error",
       });
     }
-  }, [message, encryptE, encryptN, keys]);
+  }, [message, keys, encryptE, encryptN, encryptMessageMutation]);
 
   const decryptMessage = useCallback(async () => {
     if (!ciphertext) {
@@ -85,31 +85,27 @@ const SecureMessage = () => {
     }
 
     try {
-      const decrypted = await fetch(
-        "http://localhost:8000/api/decrypt-message",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ciphertext,
-            private_key: { d, n },
-            message_length: message.length,
-          }),
-        }
-      )
-        .then((res) => res.json())
-        .then((data) => data.plainText);
+      const decrypted = await decryptMessageMutation({
+        ciphertext,
+        private_key: { d, n },
+        message_length: message.length,
+      }).unwrap();
 
-      setDecryptedMessage(decrypted);
+      setDecryptedMessage(decrypted.plainText);
       toast.success("Giải mã thành công!");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi giải mã!", {
         description: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [ciphertext, decryptD, decryptN, keys, message.length]);
+  }, [
+    ciphertext,
+    decryptD,
+    decryptMessageMutation,
+    decryptN,
+    keys,
+    message.length,
+  ]);
 
   const handleKeysGenerated = useCallback((generatedKeys: RSAKeys) => {
     setKeys(generatedKeys);

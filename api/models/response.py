@@ -16,8 +16,7 @@ class GenerateKeyResponse(BaseModel):
 
 
 class EncryptMessageResponse(BaseModel):
-    ciphertext: str
-    message_length: int = 0
+    cipherText: str
     
 
 class DecryptMessageResponse(BaseModel):

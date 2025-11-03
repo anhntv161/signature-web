@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Copy, Key } from "lucide-react";
 import { copyToClipboard } from "@/lib/utils";
 import { RSAKeys } from "@/types/key";
+import { useGenerateKeysMutation } from "@/redux/apis/key-api";
 
 interface KeyGeneratorProps {
   rsaKeys?: RSAKeys | null;
@@ -24,6 +25,7 @@ const KeyGenerator = ({ onKeysGenerated, rsaKeys }: KeyGeneratorProps) => {
   const [q, setQ] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [keys, setKeys] = useState<RSAKeys | null>(rsaKeys || null);
+  const [generateKey] = useGenerateKeysMutation();
 
   const isPrime = useCallback((num: number): boolean => {
     if (num <= 1) return false;
@@ -37,41 +39,36 @@ const KeyGenerator = ({ onKeysGenerated, rsaKeys }: KeyGeneratorProps) => {
   }, []);
 
   const generateKeys = useCallback(async () => {
-    const pNum = parseInt(p);
-    const qNum = parseInt(q);
+    const pNum = p ? parseInt(p) : null;
+    const qNum = q ? parseInt(q) : null;
 
-    if (!isPrime(pNum)) {
+    if (pNum && !isPrime(pNum)) {
       toast.error("p phải là số nguyên tố!");
       return;
     }
 
-    if (!isPrime(qNum)) {
+    if (qNum && !isPrime(qNum)) {
       toast.error("q phải là số nguyên tố!");
       return;
     }
 
-    if (pNum === qNum) {
+    if (pNum && qNum && pNum === qNum) {
       toast.error("p và q phải khác nhau!");
       return;
     }
 
     try {
       setIsGenerating(true);
-      const generatedKeys: RSAKeys = await fetch(
-        `http://localhost:8000/api/generate-keys`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ p: pNum, q: qNum }),
-        }
-      ).then((res) => res.json());
+      const generatedKeys: RSAKeys = await generateKey({
+        p: pNum,
+        q: qNum,
+      }).unwrap();
 
       setKeys(generatedKeys);
       if (onKeysGenerated) {
         onKeysGenerated(generatedKeys);
       }
+      toast.success("Khóa RSA đã được tạo thành công!");
     } catch (error) {
       console.error(error);
       toast.error("Có lỗi xảy ra khi tạo khóa!", {
@@ -80,9 +77,7 @@ const KeyGenerator = ({ onKeysGenerated, rsaKeys }: KeyGeneratorProps) => {
     } finally {
       setIsGenerating(false);
     }
-
-    toast.success("Khóa RSA đã được tạo thành công!");
-  }, [p, q, isPrime, onKeysGenerated]);
+  }, [p, q, isPrime, generateKey, onKeysGenerated]);
 
   return (
     <Card className="shadow-card">

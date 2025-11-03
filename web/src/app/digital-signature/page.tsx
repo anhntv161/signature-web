@@ -26,6 +26,10 @@ import KeyGenerator from "@/components/KeyGenerator";
 import { Textarea } from "@/components/ui/textarea";
 import { copyToClipboard } from "@/lib/utils";
 import { RSAKeys } from "@/types/key";
+import {
+  useSignDocumentsMutation,
+  useVerifySignatureMutation,
+} from "@/redux/apis/digital-signature-api";
 
 const DigitalSignature = () => {
   const [keys, setKeys] = useState<RSAKeys | null>(null);
@@ -46,6 +50,9 @@ const DigitalSignature = () => {
     fileHash?: string;
     signatureHash?: string;
   } | null>(null);
+
+  const [signFileMutation] = useSignDocumentsMutation();
+  const [verifySignatureMutation] = useVerifySignatureMutation();
 
   const handleFileUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>, isForVerify: boolean = false) => {
@@ -83,19 +90,11 @@ const DigitalSignature = () => {
     }
 
     try {
-      const sig = await fetch(`http://localhost:8000/api/sign-docs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: fileContent,
-          private_key: { d, n },
-        }),
-      })
-        .then((res) => res.json())
-        .then((data) => data.signature);
-      setSignature(sig.toString());
+      const sig = await signFileMutation({
+        text: fileContent,
+        private_key: { d, n },
+      }).unwrap();
+      setSignature(sig.signature);
 
       toast.success("Ký số thành công!");
     } catch (error) {
@@ -103,7 +102,7 @@ const DigitalSignature = () => {
         description: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [fileContent, keys, signD, signN]);
+  }, [fileContent, keys, signD, signFileMutation, signN]);
 
   const handleVerifySignature = useCallback(async () => {
     if (!verifyFileContent || !verifySignatureValue) {
@@ -120,26 +119,15 @@ const DigitalSignature = () => {
     }
 
     try {
-      const isValid = await fetch(
-        `http://localhost:8000/api/verify-signature`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            text: verifyFileContent,
-            signature: verifySignatureValue,
-            public_key: { e, n },
-          }),
-        }
-      )
-        .then((res) => res.json())
-        .then((data) => data.isValid);
+      const isValid = await verifySignatureMutation({
+        text: verifyFileContent,
+        signature: verifySignatureValue,
+        public_key: { e, n },
+      }).unwrap();
 
       setVerificationResult({
-        valid: isValid,
-        message: isValid
+        valid: isValid.isValid,
+        message: isValid.isValid
           ? "Chữ ký hợp lệ! File không bị sửa đổi."
           : "Chữ ký không khớp hoặc file đã bị chỉnh sửa!",
       });
@@ -154,7 +142,14 @@ const DigitalSignature = () => {
         description: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [verifyFileContent, verifySignatureValue, keys, verifyE, verifyN]);
+  }, [
+    verifyFileContent,
+    verifySignatureValue,
+    keys,
+    verifyE,
+    verifyN,
+    verifySignatureMutation,
+  ]);
 
   const downloadSignature = useCallback(() => {
     const sigData = {

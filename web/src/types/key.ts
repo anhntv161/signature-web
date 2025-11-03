@@ -8,3 +8,13 @@ export interface RSAKeys {
     n: number;
   };
 }
+
+export interface PublicKey {
+  e: number;
+  n: number;
+}
+
+export interface PrivateKey {
+  d: number;
+  n: number;
+}
