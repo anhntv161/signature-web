@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 220 25% 97%;
+    --foreground: 220 40% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 40% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 40% 10%;
+
+    --primary: 210 100% 45%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 195 100% 60%;
+
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 220 40% 15%;
+
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 15% 45%;
+
+    --accent: 195 90% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 210 100% 45%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens for RSA Platform */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 45%), hsl(195 100% 60%));
+    --gradient-hero: linear-gradient(180deg, hsl(220 25% 97%), hsl(210 100% 98%));
+    --shadow-card: 0 4px 24px -4px hsl(210 100% 45% / 0.1);
+    --shadow-elevated: 0 12px 40px -8px hsl(210 100% 45% / 0.15);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 220 40% 8%;
+    --foreground: 220 15% 95%;
+
+    --card: 220 35% 12%;
+    --card-foreground: 220 15% 95%;
+
+    --popover: 220 35% 12%;
+    --popover-foreground: 220 15% 95%;
+
+    --primary: 195 100% 60%;
+    --primary-foreground: 220 40% 8%;
+    --primary-glow: 210 100% 70%;
+
+    --secondary: 220 30% 18%;
+    --secondary-foreground: 220 15% 95%;
+
+    --muted: 220 30% 18%;
+    --muted-foreground: 220 15% 65%;
+
+    --accent: 195 90% 50%;
+    --accent-foreground: 220 40% 8%;
+
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 220 15% 95%;
+
+    --border: 220 30% 20%;
+    --input: 220 30% 20%;
+    --ring: 195 100% 60%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(195 100% 60%), hsl(210 100% 70%));
+    --gradient-hero: linear-gradient(180deg, hsl(220 40% 8%), hsl(220 35% 12%));
+    --shadow-card: 0 4px 24px -4px hsl(195 100% 60% / 0.15);
+    --shadow-elevated: 0 12px 40px -8px hsl(195 100% 60% / 0.2);
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  #root {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .logo {
+    height: 6em;
+    padding: 1.5em;
+    will-change: filter;
+    transition: filter 300ms;
+  }
+
+  .logo:hover {
+    filter: drop-shadow(0 0 2em #646cffaa);
+  }
+
+  .logo.react:hover {
+    filter: drop-shadow(0 0 2em #61dafbaa);
+  }
+
+  .card {
+    padding: 2em;
+  }
+
+  .read-the-docs {
+    color: #888;
+  }
+}
+
+/* Custom animations */
+@layer utilities {
+  /* Custom gradient utilities */
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, hsl(210 100% 45%), hsl(195 100% 60%));
+  }
+
+  .text-gradient-primary {
+    background: linear-gradient(135deg, hsl(210 100% 45%), hsl(195 100% 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .bg-gradient-hero {
+    background: linear-gradient(180deg, hsl(220 25% 97%), hsl(210 100% 98%));
+  }
+
+  /* Dark mode gradients */
+  .dark .bg-gradient-primary {
+    background: linear-gradient(135deg, hsl(195 100% 60%), hsl(210 100% 70%));
+  }
+
+  .dark .bg-gradient-hero {
+    background: linear-gradient(180deg, hsl(220 40% 8%), hsl(220 35% 12%));
+  }
+
+  /* Custom shadow utilities */
+  .shadow-card {
+    box-shadow: 0 4px 24px -4px hsl(210 100% 45% / 0.1);
+  }
+
+  .shadow-elevated {
+    box-shadow: 0 12px 40px -8px hsl(210 100% 45% / 0.15);
+  }
+
+  /* Dark mode shadows */
+  .dark .shadow-card {
+    box-shadow: 0 4px 24px -4px hsl(195 100% 60% / 0.15);
+  }
+
+  .dark .shadow-elevated {
+    box-shadow: 0 12px 40px -8px hsl(195 100% 60% / 0.2);
+  }
+
+  /* Custom transition utility */
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Animation keyframes */
+  @keyframes logo-spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    a:nth-of-type(2) .logo {
+      animation: logo-spin infinite 20s linear;
+    }
+  }
+}
