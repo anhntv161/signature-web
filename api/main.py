@@ -38,18 +38,41 @@ async def generate_key(generate_key_request: GenerateKeyRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
+# @app.post("/encrypt-message")
+# async def encrypt_message(
+#     encrypt_message_request: EncryptMessageRequest
+# ):
+#     try:
+#         cipher = encrypt(
+#             message=encrypt_message_request.message,
+#             e=int(encrypt_message_request.public_key.e),
+#             n=int(encrypt_message_request.public_key.n)
+#         )
+#         return EncryptMessageResponse(
+#             cipherText=str(cipher), 
+#         )
+#     except ValueError as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 @app.post("/encrypt-message")
-async def encrypt_message(
-    encrypt_message_request: EncryptMessageRequest
-):
+async def encrypt_message(req: EncryptMessageRequest):
     try:
-        cipher = encrypt(
-            message=encrypt_message_request.message,
-            e=int(encrypt_message_request.public_key.e),
-            n=int(encrypt_message_request.public_key.n)
-        )
+        if req.public_key and req.public_key.e and req.public_key.n:
+            e_str, n_str = req.public_key.e, req.public_key.n
+        else:
+            e_str, n_str = req.e, req.n  # đã được validator đảm bảo không None
+
+        e_val = int(e_str)  # ép về int ở server để an toàn
+        n_val = int(n_str)
+
+        cipher = encrypt(message=req.message, e=e_val, n=n_val)
+
+        # (Khuyến nghị) trả thêm message_length để tiện giải mã về sau
         return EncryptMessageResponse(
-            cipherText=str(cipher), 
+            cipherText=str(cipher),
+            # nếu model hiện chưa có field này, bạn có thể thêm:
+            # message_length=len(req.message)
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -64,8 +87,7 @@ async def decrypt_message(
         plaintext = decrypt(
             cipher_int=int(decrypt_message_request.ciphertext),
             d=int(decrypt_message_request.private_key.d),
-            n=int(decrypt_message_request.private_key.n),
-            message_length=decrypt_message_request.message_length
+            n=int(decrypt_message_request.private_key.n)
         )
         return DecryptMessageResponse(plainText=plaintext)
     except ValueError as e:

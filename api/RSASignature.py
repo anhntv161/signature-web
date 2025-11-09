@@ -107,18 +107,39 @@ def gcd(p, q):
         p, q = q, p % q
     return p
 
-def encrypt(message, e, n):
-    m = hash(message)
+# def encrypt(message, e, n):
+#     m = hash(message)
+#     if m >= n:
+#         raise ValueError("Plaintext numeric too large for modulus n; increase key size or shorten message.")
+#     m_mod = m % n
+#     cipher = pow(m_mod, e, n)
+#     return cipher
+
+# def decrypt(cipher_int, d, n, message_length):
+#     m = pow(cipher_int, d, n)
+#     return unhash(m, message_length)
+def str_to_int(s: str) -> int:
+    data = s.encode("utf-8")                
+    return int.from_bytes(data, "big")      
+
+def int_to_str(x: int) -> str:
+    if x == 0:
+        return ""                           
+    blen = (x.bit_length() + 7) // 8        
+    data = x.to_bytes(blen, "big")          
+    return data.decode("utf-8")             
+
+def encrypt(message: str, e: int, n: int) -> int:
+    m = str_to_int(message)
     if m >= n:
-        raise ValueError("Plaintext numeric too large for modulus n; increase key size or shorten message.")
-    m_mod = m % n
-    cipher = pow(m_mod, e, n)
-    return cipher
+        raise ValueError(
+            "Plaintext integer >= modulus n. Tăng kích thước khoá hoặc rút gọn thông điệp."
+        )
+    return pow(m, e, n)
 
-def decrypt(cipher_int, d, n, message_length):
+def decrypt(cipher_int: int, d: int, n: int) -> str:
     m = pow(cipher_int, d, n)
-    return unhash(m, message_length)
-
+    return int_to_str(m)
 def sign(message, d, n):
     try:
         m = hash(message)

@@ -33,6 +33,8 @@ import {
 
 const DigitalSignature = () => {
   const [keys, setKeys] = useState<RSAKeys | null>(null);
+
+  // SIGN
   const [fileContent, setFileContent] = useState("");
   const [fileName, setFileName] = useState("");
   const [signature, setSignature] = useState("");
@@ -40,6 +42,7 @@ const DigitalSignature = () => {
   const [signD, setSignD] = useState("");
   const [signN, setSignN] = useState("");
 
+  // VERIFY
   const [verifyE, setVerifyE] = useState("");
   const [verifyN, setVerifyN] = useState("");
   const [verifyFileContent, setVerifyFileContent] = useState("");
@@ -47,8 +50,6 @@ const DigitalSignature = () => {
   const [verificationResult, setVerificationResult] = useState<{
     valid: boolean;
     message: string;
-    fileHash?: string;
-    signatureHash?: string;
   } | null>(null);
 
   const [signFileMutation] = useSignDocumentsMutation();
@@ -76,67 +77,65 @@ const DigitalSignature = () => {
   );
 
   const signFile = useCallback(async () => {
-    if (!fileContent) {
-      toast.error("Vui lòng tải lên file cần ký!");
+    if (!fileContent.trim()) {
+      toast.error("Vui lòng nhập hoặc tải lên tài liệu cần ký!");
       return;
     }
 
-    const d = keys ? keys.privateKey.d : parseInt(signD);
-    const n = keys ? keys.privateKey.n : parseInt(signN);
+    const dStr = keys ? String(keys.privateKey.d) : signD.trim();
+    const nStr = keys ? String(keys.privateKey.n) : signN.trim();
 
-    if (!d || !n) {
+    if (!dStr || !nStr) {
       toast.error("Vui lòng nhập khóa riêng tư hoặc tạo khóa mới!");
       return;
     }
 
     try {
-      const sig = await signFileMutation({
+      const res = await signFileMutation({
         text: fileContent,
-        private_key: { d, n },
+        private_key: { d: dStr, n: nStr }, // gửi chuỗi
       }).unwrap();
-      setSignature(sig.signature);
 
+      setSignature(res.signature);
       toast.success("Ký số thành công!");
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi ký file!", {
+      toast.error("Có lỗi xảy ra khi ký tài liệu!", {
         description: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [fileContent, keys, signD, signFileMutation, signN]);
+  }, [fileContent, keys, signD, signN, signFileMutation]);
 
   const handleVerifySignature = useCallback(async () => {
-    if (!verifyFileContent || !verifySignatureValue) {
-      toast.error("Vui lòng tải lên file và chữ ký!");
+    if (!verifyFileContent.trim() || !verifySignatureValue.trim()) {
+      toast.error("Vui lòng nhập/tải lên tài liệu và chữ ký!");
       return;
     }
 
-    const e = keys ? keys.publicKey.e : parseInt(verifyE);
-    const n = keys ? keys.publicKey.n : parseInt(verifyN);
+    const eStr = keys ? String(keys.publicKey.e) : verifyE.trim();
+    const nStr = keys ? String(keys.publicKey.n) : verifyN.trim();
 
-    if (!e || !n) {
+    if (!eStr || !nStr) {
       toast.error("Vui lòng nhập khóa công khai hoặc tạo khóa mới!");
       return;
     }
 
     try {
-      const isValid = await verifySignatureMutation({
+      const res = await verifySignatureMutation({
         text: verifyFileContent,
         signature: verifySignatureValue,
-        public_key: { e, n },
+        public_key: { e: eStr, n: nStr }, // gửi chuỗi
       }).unwrap();
 
       setVerificationResult({
-        valid: isValid.isValid,
-        message: isValid.isValid
-          ? "Chữ ký hợp lệ! File không bị sửa đổi."
-          : "Chữ ký không khớp hoặc file đã bị chỉnh sửa!",
+        valid: res.isValid,
+        message: res.isValid
+          ? "Chữ ký hợp lệ! Tài liệu không bị thay đổi."
+          : "Chữ ký không hợp lệ hoặc tài liệu đã bị chỉnh sửa!",
       });
 
-      if (isValid) {
-        toast.success("Xác minh thành công!");
-      } else {
-        toast.error("Xác minh thất bại!");
-      }
+      res.isValid
+        ? toast.success("Xác minh thành công!")
+        : toast.error("Xác minh thất bại!");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi xác minh!", {
         description: error instanceof Error ? error.message : String(error),
@@ -152,9 +151,11 @@ const DigitalSignature = () => {
   ]);
 
   const downloadSignature = useCallback(() => {
+    if (!signature) return;
+
     const sigData = {
-      fileName: fileName,
-      signature: signature,
+      fileName: fileName || "document",
+      signature,
     };
 
     const blob = new Blob([JSON.stringify(sigData, null, 2)], {
@@ -163,7 +164,7 @@ const DigitalSignature = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${fileName}.sig`;
+    a.download = `${fileName || "document"}.sig`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -180,7 +181,9 @@ const DigitalSignature = () => {
             const data = JSON.parse(event.target?.result as string);
             if (data.signature) {
               setVerifySignatureValue(data.signature);
-              toast.success("Chữ ký đã được tải lên!");
+              toast.success("Tải chữ ký thành công!");
+            } else {
+              toast.error("File chữ ký không hợp lệ (thiếu field signature)!");
             }
           } catch (error) {
             toast.error("File chữ ký không hợp lệ!", {
@@ -197,10 +200,11 @@ const DigitalSignature = () => {
 
   const handleKeysGenerated = useCallback((generatedKeys: RSAKeys) => {
     setKeys(generatedKeys);
-    setSignD(generatedKeys.privateKey.d.toString());
-    setSignN(generatedKeys.privateKey.n.toString());
-    setVerifyE(generatedKeys.publicKey.e.toString());
-    setVerifyN(generatedKeys.publicKey.n.toString());
+    // Lưu khóa dưới dạng chuỗi
+    setSignD(String(generatedKeys.privateKey.d));
+    setSignN(String(generatedKeys.privateKey.n));
+    setVerifyE(String(generatedKeys.publicKey.e));
+    setVerifyN(String(generatedKeys.publicKey.n));
   }, []);
 
   return (
@@ -243,16 +247,14 @@ const DigitalSignature = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="file-upload">Tài liệu cần ký</Label>
-                    <div className="flex gap-2">
-                      <Textarea
-                        id="message"
-                        placeholder="Nhập nội dung tài liệu cần ký..."
-                        value={fileContent}
-                        onChange={(e) => setFileContent(e.target.value)}
-                        rows={4}
-                      />
-                    </div>
+                    <Label htmlFor="message">Tài liệu cần ký</Label>
+                    <Textarea
+                      id="message"
+                      placeholder="Nhập nội dung tài liệu cần ký..."
+                      value={fileContent}
+                      onChange={(e) => setFileContent(e.target.value)}
+                      rows={5}
+                    />
                     {fileName && (
                       <p className="text-sm text-muted-foreground">
                         File: {fileName}
@@ -277,7 +279,7 @@ const DigitalSignature = () => {
                       <Label htmlFor="sign-d">Khóa riêng tư d</Label>
                       <Input
                         id="sign-d"
-                        type="number"
+                        type="text"
                         value={signD}
                         onChange={(e) => setSignD(e.target.value)}
                         placeholder="Nhập d hoặc tạo khóa"
@@ -287,7 +289,7 @@ const DigitalSignature = () => {
                       <Label htmlFor="sign-n">Khóa riêng tư n</Label>
                       <Input
                         id="sign-n"
-                        type="number"
+                        type="text"
                         value={signN}
                         onChange={(e) => setSignN(e.target.value)}
                         placeholder="Nhập n hoặc tạo khóa"
@@ -301,13 +303,6 @@ const DigitalSignature = () => {
 
                   {signature && (
                     <div className="space-y-4 rounded-lg border border-border bg-muted/50 p-4 text-left">
-                      {/* <div className="space-y-2">
-                        <Label>Hash của file</Label>
-                        <div className="rounded bg-background p-3 font-mono text-sm">
-                          {fileHash}
-                        </div>
-                      </div> */}
-
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label>Chữ ký số (Signature)</Label>
@@ -365,9 +360,7 @@ const DigitalSignature = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="docs-input">
-                      Hoặc nhập nội dung tài liệu
-                    </Label>
+                    <Label htmlFor="docs-input">Hoặc nhập nội dung tài liệu</Label>
                     <Input
                       id="docs-input"
                       type="text"
@@ -378,9 +371,7 @@ const DigitalSignature = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signature-upload">
-                      Tải lên chữ ký (.sig)
-                    </Label>
+                    <Label htmlFor="signature-upload">Tải lên chữ ký (.sig)</Label>
                     <Input
                       id="signature-upload"
                       type="file"
@@ -390,9 +381,7 @@ const DigitalSignature = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signature-input">
-                      Hoặc nhập chữ ký thủ công
-                    </Label>
+                    <Label htmlFor="signature-input">Hoặc nhập chữ ký thủ công</Label>
                     <Input
                       id="signature-input"
                       type="text"
@@ -417,7 +406,7 @@ const DigitalSignature = () => {
                       <Label htmlFor="verify-n">Khóa công khai n</Label>
                       <Input
                         id="verify-n"
-                        type="number"
+                        type="text"
                         value={verifyN}
                         onChange={(e) => setVerifyN(e.target.value)}
                         placeholder="Nhập n hoặc tạo khóa"

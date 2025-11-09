@@ -24,6 +24,7 @@ import {
   useEncryptMessageMutation,
 } from "@/redux/apis/secure-message-api";
 import { ErrorResponse } from "@/redux/apis/api";
+import { stringifyError } from "@/lib/stringifyError";
 
 const SecureMessage = () => {
   const [keys, setKeys] = useState<RSAKeys | null>(null);
@@ -47,8 +48,8 @@ const SecureMessage = () => {
       return;
     }
 
-    const e = keys ? keys.publicKey.e : parseInt(encryptE);
-    const n = keys ? keys.publicKey.n : parseInt(encryptN);
+    const e = keys ? String(keys.publicKey.e) : encryptE.trim();
+    const n = keys ? String(keys.publicKey.n) : encryptN.trim();
 
     if (!e || !n) {
       toast.error("Vui lòng nhập khóa công khai hoặc tạo khóa mới!");
@@ -58,14 +59,15 @@ const SecureMessage = () => {
     try {
       const encrypted = await encryptMessageMutation({
         message,
-        public_key: { e, n },
+        e,
+        n,
       }).unwrap();
 
       setEncryptedMessage(encrypted.cipherText);
       toast.success("Mã hóa thành công!");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi mã hóa!", {
-        description: (error.data as ErrorResponse).detail || "Unknown error",
+        description: stringifyError(error),
       });
     }
   }, [message, keys, encryptE, encryptN, encryptMessageMutation]);
@@ -76,8 +78,8 @@ const SecureMessage = () => {
       return;
     }
 
-    const d = keys ? keys.privateKey.d : parseInt(decryptD);
-    const n = keys ? keys.privateKey.n : parseInt(decryptN);
+    const d = keys ? String(keys.privateKey.d) : decryptD.trim();
+    const n = keys ? String(keys.privateKey.n) : decryptN.trim();
 
     if (!d || !n) {
       toast.error("Vui lòng nhập khóa riêng tư hoặc tạo khóa mới!");
@@ -87,15 +89,14 @@ const SecureMessage = () => {
     try {
       const decrypted = await decryptMessageMutation({
         ciphertext,
-        private_key: { d, n },
-        message_length: message.length,
+        private_key: { d, n }
       }).unwrap();
 
       setDecryptedMessage(decrypted.plainText);
       toast.success("Giải mã thành công!");
     } catch (error) {
       toast.error("Có lỗi xảy ra khi giải mã!", {
-        description: error instanceof Error ? error.message : String(error),
+        description: stringifyError(error),
       });
     }
   }, [
@@ -276,18 +277,18 @@ const SecureMessage = () => {
                     <div className="space-y-2">
                       <Label htmlFor="decrypt-d">Khóa riêng tư d</Label>
                       <Input
-                        id="decrypt-d"
-                        type="number"
-                        value={decryptD}
-                        onChange={(e) => setDecryptD(e.target.value)}
-                        placeholder="Nhập d hoặc tạo khóa"
+                      id="decrypt-d"
+                      type="text"
+                      value={decryptD}
+                      onChange={(e) => setDecryptD(e.target.value)}
+                      placeholder="Nhập d hoặc tạo khóa"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="decrypt-n">Khóa riêng tư n</Label>
                       <Input
                         id="decrypt-n"
-                        type="number"
+                        type="text"
                         value={decryptN}
                         onChange={(e) => setDecryptN(e.target.value)}
                         placeholder="Nhập n hoặc tạo khóa"
